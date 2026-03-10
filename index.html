@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Learning AI Chat</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<h2>Learning AI Chat</h2>
+
+<div id="chat"></div>
+
+<input id="msg" placeholder="Say something...">
+<button onclick="send()">Send</button>
+
+<script type="module">
+import { learnFact, getAnswer } from './firebase.js';
+
+function add(text){
+    document.getElementById("chat").innerHTML += "<p>"+text+"</p>";
+    const chatDiv = document.getElementById("chat");
+    chatDiv.scrollTop = chatDiv.scrollHeight;
+}
+
+async function send(){
+    const message = document.getElementById("msg").value.trim();
+    if(!message) return;
+
+    add("<b>You:</b> "+message);
+
+    if(message.toLowerCase().startsWith("learn:")){
+        const fact = message.replace(/learn:/i,"").trim();
+        await learnFact(fact);
+        add("<b>AI:</b> I learned that!");
+    } else {
+        const answer = await getAnswer(message);
+        add("<b>AI:</b> "+answer);
+    }
+
+    document.getElementById("msg").value = "";
+}
+</script>
+
+</body>
+</html>
