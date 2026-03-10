@@ -1,8 +1,8 @@
-// Import Firebase modules
+// Firebase imports
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, collection, addDoc, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-// Your Firebase config
+// Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyDQ4tYhsn9AJH9hLnGmCIx6JM27UE6t0vU",
   authDomain: "ai-test-2d1aa.firebaseapp.com",
@@ -15,31 +15,32 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
-
-// Firestore instance
 const db = getFirestore(app);
 
-// Function to teach the AI a new fact
-export async function learnFact(fact) {
-    const keywords = fact.toLowerCase().split(" ");
-    await addDoc(collection(db, "knowledge"), { text: fact, keywords: keywords });
+// Store conversation message
+export async function storeMessage(role, content){
+    await addDoc(collection(db,"conversation"), {role, content, timestamp: Date.now()});
 }
 
-// Function to get the AI's answer based on stored knowledge
-export async function getAnswer(message) {
-    const words = message.toLowerCase().split(" ");
-    let answer = "I don't know yet.";
+// Get conversation history
+export async function getConversation(){
+    const q = query(collection(db,"conversation"), orderBy("timestamp"));
+    const snapshot = await getDocs(q);
+    let msgs = [];
+    snapshot.forEach(doc => msgs.push(doc.data()));
+    return msgs;
+}
 
-    const snapshot = await getDocs(collection(db, "knowledge"));
+// Store memory fact
+export async function learnFact(fact){
+    const keywords = fact.toLowerCase().split(" ");
+    await addDoc(collection(db,"memory"), {text: fact, keywords});
+}
 
-    snapshot.forEach(doc => {
-        const data = doc.data();
-        for (const k of data.keywords) {
-            if (words.includes(k)) {
-                answer = data.text;
-            }
-        }
-    });
-
-    return answer;
+// Get memory facts
+export async function getMemoryFacts(){
+    const snapshot = await getDocs(collection(db,"memory"));
+    let facts = [];
+    snapshot.forEach(doc => facts.push(doc.data()));
+    return facts;
 }
