@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Learning AI Chat</title>
+  <title>Conversational AI Chat</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<h2>Learning AI Chat</h2>
+<h2>Conversational AI Chat</h2>
 
 <div id="chat"></div>
 
@@ -14,7 +14,7 @@
 <button id="sendBtn">Send</button>
 
 <script type="module">
-import { learnFact, getAnswer } from './firebase.js';
+import { storeMessage, getConversation, learnFact, getMemoryFacts } from './firebase.js';
 
 function add(text){
     const chatDiv = document.getElementById("chat");
@@ -22,7 +22,6 @@ function add(text){
     chatDiv.scrollTop = chatDiv.scrollHeight;
 }
 
-// Event listener fixes the "send is not defined" issue
 document.getElementById("sendBtn").addEventListener("click", send);
 
 async function send() {
@@ -31,16 +30,62 @@ async function send() {
 
     add("<b>You:</b> "+message);
 
+    // Store user message
+    await storeMessage("user", message);
+
+    // Check if teaching
     if(message.toLowerCase().startsWith("learn:")){
         const fact = message.replace(/learn:/i,"").trim();
         await learnFact(fact);
         add("<b>AI:</b> I learned that!");
     } else {
-        const answer = await getAnswer(message);
-        add("<b>AI:</b> "+answer);
+        // Get conversation history
+        const history = await getConversation();
+
+        // Get memory facts
+        const memory = await getMemoryFacts();
+
+        // Simple AI response
+        let reply = generateReply(message, history, memory);
+
+        // Store AI message
+        await storeMessage("ai", reply);
+
+        add("<b>AI:</b> "+reply);
     }
 
     document.getElementById("msg").value = "";
+}
+
+// Simple dynamic reply generator
+function generateReply(message, history, memory){
+    message = message.toLowerCase();
+
+    // Check memory facts for keywords
+    for(const fact of memory){
+        for(const k of fact.keywords){
+            if(message.includes(k)){
+                return fact.text;
+            }
+        }
+    }
+
+    // Check if greeting
+    const greetings = ["hi","hello","hey","sup"];
+    for(const g of greetings){
+        if(message.includes(g)) return "Hello! How are you?";
+    }
+
+    // Check for previous user messages
+    if(history.length>1){
+        const lastUser = history.reverse().find(m=>m.role==="user");
+        if(lastUser && lastUser.content !== message){
+            return `Earlier you said: "${lastUser.content}". Interesting!`;
+        }
+    }
+
+    // Default fallback
+    return "Hmm... tell me more!";
 }
 </script>
 
